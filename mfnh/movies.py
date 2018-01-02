@@ -1,42 +1,23 @@
+from typing import Optional, Tuple
 import re
+
+from . import metadata_tokens
+from .util import min
 
 RE_SPLIT = re.compile(r"""
 \(([^\)]+)\)| # (parens)
 \[([^\]]+)\]| # [square]
-([^\.\s\(\[]+) # Sep.ara.ted
+([^\-\_\.\s\(\[]+) # Sep.ara.ted
 """, re.VERBOSE)
 RE_YEAR = re.compile(r'^(\d{4})$')
 
-# TODO more filters
-FILTER = set(('-',))
 
-# TODO more metadata tokens
-METADATA = set(('1080p', '720p', '480p', 'dvdrip', 'bluray', 'director', "director's",
-                "directors", "cut", "extended", "french"))
-
-
-def tokens(line):
+def _tokens(line):
     for m in RE_SPLIT.finditer(line):
         yield m.group(1) or m.group(2) or m.group(3)
 
 
-def min(a, b):
-    """
-    Min that allows None values.
-    """
-    if a is None and b is None:
-        raise ValueError
-    elif a is None:
-        return b
-    elif b is None:
-        return a
-    elif a < b:
-        return a
-    else:
-        return b
-
-
-def relevant(tokens):
+def extract_title_year(filename: str) -> Tuple[str, Optional[int]]:
     """
     Usually, the title is placed before the year. However, sometimes
     the title contains a year. If multiple candidates for the year are
@@ -47,7 +28,7 @@ def relevant(tokens):
     If metadata is found before the year, everything before the first
     piece of metadata will be used instead of the year.
     """
-    tokens = [t for t in tokens if t not in FILTER]
+    tokens = list(_tokens(filename))
     years = []
     metadata_idx = None
 
@@ -57,7 +38,7 @@ def relevant(tokens):
         if m:
             years.append((idx, token))
 
-        if not metadata_idx and token.lower() in METADATA:
+        if not metadata_idx and token.lower() in metadata_tokens.ALL:
             metadata_idx = idx
             break
 
@@ -76,11 +57,3 @@ def relevant(tokens):
         title = tokens[:]
 
     return ' '.join(title), year
-
-
-if __name__ == '__main__':
-    with open('dataset-movies.txt') as f:
-        for line in f.read().splitlines():
-            print(line)
-            print(relevant(tokens(line)))
-            print()
