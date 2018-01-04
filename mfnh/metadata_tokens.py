@@ -69,6 +69,7 @@ AUDIO_FORMAT = frozenset((
     "aac",
     "aac2",
     "dd5",
+    "dd2",
 ))
 
 LANGUAGE = frozenset((
@@ -77,9 +78,10 @@ LANGUAGE = frozenset((
 
 OTHERS = frozenset((
     "director",
-    "director's"
+    "directors",
+    "director's",
     "dc",
-    "extendted",
+    "extended",
     "theatrical",
     "uncut",
 ))
@@ -92,3 +94,5 @@ ALL = frozenset(
     LANGUAGE |
     OTHERS
 )
+
+ALL_WITHOUT_LANGUAGES = ALL - LANGUAGE
