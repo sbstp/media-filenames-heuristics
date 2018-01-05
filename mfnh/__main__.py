@@ -1,91 +1,82 @@
-import sys
 from pathlib import Path
+import argparse
+import sys
 
-import jinja2
 import tmdbsimple as tmdb
 
-from .languages import get_code
+from .cleanup import clean_database, locate_garbage
+from .db import Session, Movie
+from .generate import generate_scan_report
 from .movies import find_movies
-from .util import humanize_size, filter_name
+from .rename import ITEM_TYPE_MOVIE, ITEM_TYPE_SUBTITLE, filter_known_files, tmdb_lookup, rename_with_info
 
 # Borrowing kodi's API key
 # ecbc86c92da237cb9faff6d3ddc4be6d
-
 tmdb.API_KEY = 'ecbc86c92da237cb9faff6d3ddc4be6d'
 
 
+def scan_root(root, sess):
+    scanned_movies = list(find_movies(root))
+    generate_scan_report(root, scanned_movies)
+    scanned_movies.sort(key=lambda m: m.title[0])
+
+    for item in filter_known_files(root, sess, scanned_movies):
+        kind = item[0]
+        if kind == ITEM_TYPE_MOVIE:
+            _, scanned_movie = item
+            print("New movie", scanned_movie.title)
+            db_movie = tmdb_lookup(scanned_movie)
+            if not db_movie:
+                print('Did not find {} on themoviedb.org'.format(scanned_movie.title))
+                continue
+
+            rename_with_info(root, scanned_movie, db_movie, sess)
+            # TODO: warn on duplicate movie
+            sess.add(db_movie)
+
+        elif kind == ITEM_TYPE_SUBTITLE:
+            _, scanned_movie, sub, db_movie_file = item
+            print('New subtitle')
+
+        sess.commit()
+
+
+def clean_root(root, sess):
+    for item in locate_garbage(root, sess):
+        if item.is_file():
+            print('Unlinking', item)
+            item.unlink()
+        elif item.is_dir():
+            item.rmdir()
+            print('Removing directory', item)
+    movies = sess.query(Movie).all()
+    for m in movies:
+        dupes = sess.query(Movie).filter_by(tmdb_id=m.tmdb_id).all()
+        if len(dupes) > 1:
+            print(m.title)
+
+
 if __name__ == '__main__':
-    root = Path(sys.argv[1])
-    movies = list(find_movies(root))
-    movies.sort(key=lambda m: m.title)
+    parser = argparse.ArgumentParser(prog='mfnh')
+    subparsers = parser.add_subparsers(dest='command')
 
-    env = jinja2.Environment()
-    env.filters['humanize_size'] = humanize_size
-    env.filters['lang_code'] = get_code
-    tpl = env.from_string("""\
-<html>
-<head>
-<meta charset="utf-8">
-<title>Media Scan Report</title>
-<style>
-body {
-    font-family: monospace;
-    font-size: small;
-    width: 100%;
-}
-td {
-    white-space: nowrap;
-    text-align: left;
-}
-.right {
-    text-align: right;
-}
-</style>
-</head>
-<body>
-<table border="1">
-<thead>
-<tr>
-<th>Path Title</th>
-<th>Subs</th>
-<th>Parent Ttitle</th>
-<th>Size</th>
-<th>Path</th>
-<th>Parent</th>
-</tr>
-</thead>
-<tbody>
-{% for m in movies %}
-<tr>
-<td>{{m.title}}</td>
-<td>
-<ul>
-{% for (sub, lang) in m.subs %}
-<li>{{lang.name}}({{lang|lang_code}}) - {{sub.relative_to(root)}}</li>
-{% endfor %}
-</ul>
-</td>
-<td>{{m.parent_title}}</td>
-<td class="right">{{m.size | humanize_size}}</td>
-<td>{{m.path.relative_to(root)}}</td>
-<td>{% if m.parent %}{{m.parent.relative_to(root)}}{% endif %}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</body>
-</html>
-""")
-    with open('output.html', 'w') as f:
-        f.write(tpl.render(root=root, movies=movies))
+    scan = subparsers.add_parser('scan', help="scan the directory for movies")
+    scan.add_argument('dir')
+    cleandb = subparsers.add_parser('cleandb', help="clean the database")
+    cleandb.add_argument('dir')
+    cleandir = subparsers.add_parser('cleandir', help="clean movies directory")
+    cleandir.add_argument('dir')
 
-    # print(tmdb.Configuration().info(), file=sys.stderr)
+    args = parser.parse_args()
+    root = Path(args.dir)
 
-    # for movie in movies[:1]:
-    #     search = tmdb.Search()
-    #     resp = search.movie(query=movie.title[0], year=movie.title[1])
-    #     results = search.results
-    #     print(results, file=sys.stderr)
-    #     title = search.results[0]['original_title']
-    #     year = search.results[0]['release_date'][:4]
-    #     print('{} ({})'.format(filter_name(title), year), file=sys.stderr)
+    print(root)
+
+    sess = Session()
+
+    if args.command == 'scan':
+        scan_root(root, sess)
+    elif args.command == 'cleandb':
+        clean_database(root, sess)
+    elif args.coomand == 'cleandir':
+        clean_root(root, sess)

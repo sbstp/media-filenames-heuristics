@@ -1,4 +1,9 @@
 import re
+import sys
+
+
+def printf(fmt, *args, file=sys.stdout, flush=False):
+    print(fmt.format(*args), end='', file=file, flush=flush)
 
 
 def min(a, b):
@@ -29,8 +34,8 @@ def humanize_size(size):
 
 
 # Invalid characters in filenames
-_RE_FILE_FILTER = re.compile(r'\<\>\:\"\/\\\|\?\*\0\%')
+_RE_FILENAME_FILTER = re.compile(r'[\<\>\:\"\/\\\|\?\*\0\%]')
 
 
-def filter_name(name):
-    return _RE_FILE_FILTER.sub('', name)
+def filter_filename(name):
+    return _RE_FILENAME_FILTER.sub('_', name)
