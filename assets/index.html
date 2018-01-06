@@ -9,9 +9,9 @@
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <div class="sidebar">
-            <div>
+            <div class="input-container">
                 <input type="text" v-model="search" placeholder="Search by title or year...">
             </div>
             <ul>
@@ -20,10 +20,19 @@
         </div>
         <div class="backdrop" v-bind:style="{backgroundImage: backdrop}">
             <div>
-                <div class="buttons">
-                    <button v-on:click="prev">Previous</button>
-                    <button v-on:click="next">Next</button>
+                <div class="random-container">
+                    <div>
+                        <span class="button random" title="Random" v-on:click="random">
+                            <span>&#8634;</span>
+                        </span>
+                    </div>
                 </div>
+                <span class="button prev" title="Previous" v-on:click="prev">
+                    <span>&lt;</span>
+                </span>
+                <span class="button next" title="Next" v-on:click="next">
+                    <span>&gt;</span>
+                </span>
                 <div class="slide" v-bind:style="{backgroundImage: poster}">
                 </div>
                 <div class="footer">
@@ -82,6 +91,10 @@
                     if (this.index >= this.movies.length) {
                         this.index = 0;
                     }
+                    this.movie = this.movies[this.index];
+                },
+                random: function () {
+                    this.index = Math.floor(Math.random() * this.movies.length);
                     this.movie = this.movies[this.index];
                 },
                 select: function (tmdb_id) {

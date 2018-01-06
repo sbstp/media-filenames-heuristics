@@ -191,6 +191,7 @@ def generate_static(root, sess, target):
 
     data = list(map(to_json, movies))
 
+    shutil.copy('assets/style.css', str(target / 'style.css'))
     tpl = Path('assets/index.html').read_text()
     target = (target / 'index.html')
     target.write_text(tpl.replace('$$JSON_DATA$$', json.dumps(data)))
