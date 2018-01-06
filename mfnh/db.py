@@ -1,8 +1,12 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy import create_engine, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
+import functools
+import sqlalchemy
 
 Base = declarative_base()
+
+Column = functools.partial(sqlalchemy.Column, nullable=False)
 
 
 class Subtitle(Base):

@@ -27,16 +27,3 @@ def locate_garbage(root, sess):
             if len([file for file in _walk_files(item) if file not in bad_files]) == 0:
                 yield from _walk_dirs(item)
                 yield item
-
-
-def clean_database(root, sess, duplicate=True):
-    for movie in sess.query(Movie).all():
-        path = root / movie.file.path
-        if not path.exists():
-            printf('Missing movie file: "{}"\n', movie.file.path)
-            sess.delete(movie)
-            printf('Removing movie: "{}" from database\n', movie.title)
-        dupes = sess.query(Movie).filter_by(tmdb_id=movie.tmdb_id).all()
-        if len(dupes) > 1:
-            printf('Duplicate movie: "{}"\n', movie.title)
-    sess.commit()

@@ -8,6 +8,7 @@ setup(
     install_requires=[
         'jinja2',
         'pycountry',
+        'requests',
         'sqlalchemy',
         'tmdbsimple',
     ]

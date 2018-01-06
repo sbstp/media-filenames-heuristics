@@ -1,44 +1,9 @@
 from pathlib import Path
 import argparse
-import sys
 
-import tmdbsimple as tmdb
-
-from .cleanup import clean_database, locate_garbage
+from .cleanup import locate_garbage
 from .db import Session, Movie
-from .generate import generate_scan_report
-from .movies import find_movies
-from .rename import ITEM_TYPE_MOVIE, ITEM_TYPE_SUBTITLE, filter_known_files, tmdb_lookup, rename_with_info
-
-# Borrowing kodi's API key
-# ecbc86c92da237cb9faff6d3ddc4be6d
-tmdb.API_KEY = 'ecbc86c92da237cb9faff6d3ddc4be6d'
-
-
-def scan_root(root, sess):
-    scanned_movies = list(find_movies(root))
-    generate_scan_report(root, scanned_movies)
-    scanned_movies.sort(key=lambda m: m.title[0])
-
-    for item in filter_known_files(root, sess, scanned_movies):
-        kind = item[0]
-        if kind == ITEM_TYPE_MOVIE:
-            _, scanned_movie = item
-            print("New movie", scanned_movie.title)
-            db_movie = tmdb_lookup(scanned_movie)
-            if not db_movie:
-                print('Did not find {} on themoviedb.org'.format(scanned_movie.title))
-                continue
-
-            rename_with_info(root, scanned_movie, db_movie, sess)
-            # TODO: warn on duplicate movie
-            sess.add(db_movie)
-
-        elif kind == ITEM_TYPE_SUBTITLE:
-            _, scanned_movie, sub, db_movie_file = item
-            print('New subtitle')
-
-        sess.commit()
+from . import tasks
 
 
 def clean_root(root, sess):
@@ -58,25 +23,29 @@ def clean_root(root, sess):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='mfnh')
+    parser.add_argument('dir')
     subparsers = parser.add_subparsers(dest='command')
 
     scan = subparsers.add_parser('scan', help="scan the directory for movies")
-    scan.add_argument('dir')
     cleandb = subparsers.add_parser('cleandb', help="clean the database")
-    cleandb.add_argument('dir')
     cleandir = subparsers.add_parser('cleandir', help="clean movies directory")
-    cleandir.add_argument('dir')
+    images = subparsers.add_parser('images', help="download posters and backdrops for the movies in your library")
+    static = subparsers.add_parser('static', help="generate static website with movie collection")
+    static.add_argument('target_dir', help="target directory, will create if necessary")
 
     args = parser.parse_args()
     root = Path(args.dir)
 
-    print(root)
-
     sess = Session()
 
     if args.command == 'scan':
-        scan_root(root, sess)
+        tasks.scan_root(root, sess)
     elif args.command == 'cleandb':
-        clean_database(root, sess)
-    elif args.coomand == 'cleandir':
-        clean_root(root, sess)
+        tasks.clean_database(root, sess)
+    elif args.command == 'cleandir':
+        # clean_root(root, sess)
+        pass
+    elif args.command == 'images':
+        tasks.download_images(root, sess)
+    elif args.command == 'static':
+        tasks.generate_static(root, sess, args.target_dir)

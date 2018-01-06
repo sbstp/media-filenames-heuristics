@@ -105,5 +105,5 @@ ENV/
 # mypy
 .mypy_cache/
 
-*.txt
-*.html
+/*.txt
+/*.html

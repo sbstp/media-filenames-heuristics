@@ -1,9 +1,19 @@
 import re
-import sys
 
 
-def printf(fmt, *args, file=sys.stdout, flush=False):
-    print(fmt.format(*args), end='', file=file, flush=flush)
+def printf(fmt, *args, **kwargs):
+    print(fmt.format(*args, **kwargs), end='')
+
+
+def printlnf(fmt, *args, **kwargs):
+    print(fmt.format(*args, **kwargs))
+
+
+def format_title_tuple(title):
+    if title[1]:
+        return '{} ({})'.format(title[0], title[1])
+    else:
+        return '{}'.format(title[0])
 
 
 def min(a, b):
