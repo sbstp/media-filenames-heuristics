@@ -66,7 +66,7 @@ def _extract_title_year(file: Path):
 
 class MovieResult:
 
-    def __init__(self, path, parent, subs):
+    def __init__(self, path, parent, subs, backdrop=None, poster=None):
         self.path = path  # type: Path
         self.title = _extract_title_year(path)  # type: Tuple[str, Optional[int]]
         self.parent = parent  # type: Optional[Path]
@@ -75,6 +75,8 @@ class MovieResult:
             self.parent_title = _extract_title_year(parent)
         self.size = path.stat().st_size  # type: int
         self.subs = subs
+        self.backdrop = backdrop
+        self.poster = poster
 
 
 def _is_movie_file(file):
@@ -114,12 +116,24 @@ def _sub_id_language(subfile):
     return None
 
 
+def _is_image_file(file):
+    if file.exists():
+        return file
+    else:
+        return None
+
+
+def _scan_for_images(movie_path):
+    return _is_image_file(movie_path.parent / "backdrop.jpg"), _is_image_file(movie_path.parent / "poster.jpg")
+
+
 def _find_movies(parent, root):
     # type: (Path, Path) -> Generator[MovieResult, None, None]
     for item in parent.iterdir():
         if item.is_file() and _is_movie_file(item):
                 subs = [(sub, _sub_id_language(sub)) for sub in _scan_for_subs(parent, item)]
-                yield MovieResult(item, None if parent == root else parent, subs)
+                backdrop, poster = _scan_for_images(item)
+                yield MovieResult(item, None if parent == root else parent, subs, backdrop, poster)
         if item.is_dir():
             yield from _find_movies(item, root)
 

@@ -1,5 +1,6 @@
 from pathlib import Path
-import argparse
+
+import click
 
 from .cleanup import locate_garbage
 from .db import Session, Movie
@@ -21,31 +22,46 @@ def clean_root(root, sess):
             print(m.title)
 
 
+sess = Session()
+
+
+@click.group('merovingian')
+def app():
+    pass
+
+
+@app.command(help='add a root directory to the database')
+@click.option('--content-type', type=click.Choice(['movies']), required=True)
+@click.argument('root')
+def add(content_type, root):
+    tasks.add_root(sess, Path(root), content_type)
+
+
+@app.command(help='scan the root directories for new content')
+def scan():
+    tasks.scan(sess)
+
+
+@app.command(help='rename movies cleanly')
+def remove():
+    tasks.rename(sess)
+
+
+@app.command(help='clean the database from removed files')
+def cleandb():
+    tasks.clean_database(sess)
+
+
+@app.command('fetch-images', help='download images for the content')
+def fetch_images():
+    tasks.download_images(sess)
+
+
+@app.command(help='generate a static website using database')
+@click.argument('target-dir')
+def static(target_dir):
+    tasks.generate_static(sess, target_dir)
+
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='mfnh')
-    parser.add_argument('dir')
-    subparsers = parser.add_subparsers(dest='command')
-
-    scan = subparsers.add_parser('scan', help="scan the directory for movies")
-    cleandb = subparsers.add_parser('cleandb', help="clean the database")
-    cleandir = subparsers.add_parser('cleandir', help="clean movies directory")
-    images = subparsers.add_parser('images', help="download posters and backdrops for the movies in your library")
-    static = subparsers.add_parser('static', help="generate static website with movie collection")
-    static.add_argument('target_dir', help="target directory, will create if necessary")
-
-    args = parser.parse_args()
-    root = Path(args.dir)
-
-    sess = Session()
-
-    if args.command == 'scan':
-        tasks.scan_root(root, sess)
-    elif args.command == 'cleandb':
-        tasks.clean_database(root, sess)
-    elif args.command == 'cleandir':
-        # clean_root(root, sess)
-        pass
-    elif args.command == 'images':
-        tasks.download_images(root, sess)
-    elif args.command == 'static':
-        tasks.generate_static(root, sess, args.target_dir)
+    app(prog_name='merovingian')

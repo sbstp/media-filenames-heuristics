@@ -49,3 +49,7 @@ _RE_FILENAME_FILTER = re.compile(r'[\<\>\:\"\/\\\|\?\*\0\%]')
 
 def filter_filename(name):
     return _RE_FILENAME_FILTER.sub('_', name)
+
+
+def str_rel_path(path, rel_to):
+    return str(path.relative_to(rel_to))

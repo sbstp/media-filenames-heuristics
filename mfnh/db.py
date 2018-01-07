@@ -1,12 +1,28 @@
-from sqlalchemy import create_engine, Integer, String, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from pathlib import Path
+import enum
 import functools
+
+from sqlalchemy import create_engine, Enum, Integer, String, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import backref, relationship, sessionmaker
 import sqlalchemy
 
 Base = declarative_base()
 
 Column = functools.partial(sqlalchemy.Column, nullable=False)
+
+
+class ContentType(enum.Enum):
+    MOVIES = 1
+    TV = 2
+
+
+class Root(Base):
+    __tablename__ = 'roots'
+
+    id = Column(Integer, primary_key=True)
+    path = Column(String)
+    content_type = Column(Enum(ContentType))
 
 
 class Subtitle(Base):
@@ -15,12 +31,11 @@ class Subtitle(Base):
     id = Column(Integer, primary_key=True)
     lang = Column(String(3), nullable=True)  # alpha_3 code
 
-    # movie
-    movie_id = Column(String, ForeignKey('movies.id'))
+    movie_id = Column(Integer, ForeignKey('movies.id'))
+    movie = relationship('Movie', backref=backref('subtitles', cascade="delete"))
 
-    # file
-    file = relationship('File')
     file_id = Column(Integer, ForeignKey('files.id'))
+    file = relationship('File', cascade="delete")
 
 
 class Movie(Base):
@@ -32,16 +47,14 @@ class Movie(Base):
     year = Column(Integer)
     overview = Column(String)
     tmdb_id = Column(Integer, unique=True)
-    # file
-    file_id = Column(Integer, ForeignKey('files.id'))
+
+    file_id = Column(Integer, ForeignKey('files.id'), nullable=True)
     file = relationship('File', foreign_keys=[file_id], cascade='delete')
-    # subtitles
-    subtitles = relationship('Subtitle', backref="movie", cascade='delete')
-    # poster
-    poster_id = Column(Integer, ForeignKey('files.id'))
+
+    poster_id = Column(Integer, ForeignKey('files.id'), nullable=True)
     poster = relationship('File', foreign_keys=[poster_id], cascade='delete')
-    # poster
-    backdrop_id = Column(Integer, ForeignKey('files.id'), )
+
+    backdrop_id = Column(Integer, ForeignKey('files.id'), nullable=True)
     backdrop = relationship('File', foreign_keys=[backdrop_id], cascade='delete')
 
 
@@ -49,8 +62,18 @@ class File(Base):
     __tablename__ = 'files'
 
     id = Column(Integer, primary_key=True)
-    path = Column(String)  # relative path from the root
-    original_path = Column(String)
+    path = Column(String)  # relative to the root
+
+    root_id = Column(Integer, ForeignKey('roots.id'))
+    root = relationship('Root', foreign_keys=[root_id], backref=backref("files", cascade="delete"), lazy='immediate')
+
+    @property
+    def abspath(self):
+        return Path(self.root.path) / self.path
+
+    @property
+    def relpath(self):
+        return Path(self.path)
 
 
 import os  # noqa

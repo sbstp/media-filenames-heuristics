@@ -6,6 +6,7 @@ setup(
     description='media scanning',
     packages=find_packages(),
     install_requires=[
+        'click',
         'jinja2',
         'pycountry',
         'requests',
