@@ -9,7 +9,8 @@ from ..db import Movie
 
 def generate_static(sess, target):
     target = Path(target)
-    movies = sess.query(Movie).options(joinedload(Movie.poster)).options(joinedload(Movie.backdrop)).all()
+    movies = sess.query(Movie).options(joinedload(Movie.poster)
+                                       ).options(joinedload(Movie.backdrop)).all()
 
     image_dir = target / 'images'
     image_dir.mkdir(parents=True, exist_ok=True)
@@ -21,13 +22,13 @@ def generate_static(sess, target):
             backdrop = '{}_backdrop.jpg'.format(m.tmdb_id)
             target = image_dir / backdrop
             if not target.exists():
-                shutil.copy(str(m.backdrop.root.path / m.backdrop.path), str(target))
+                shutil.copy(str(m.backdrop.get_abspath()), str(target))
 
         if m.poster:
             poster = '{}_poster.jpg'.format(m.tmdb_id)
             target = image_dir / poster
             if not target.exists():
-                shutil.copy(str(m.poster.root.path / m.poster.path), str(target))
+                shutil.copy(str(m.poster.get_abspath()), str(target))
 
         return dict(
             tmdb_id=m.tmdb_id,

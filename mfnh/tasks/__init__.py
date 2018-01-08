@@ -3,6 +3,7 @@ from ..util import printlnf
 
 from .clean import clean_database
 from .fetch import download_images
+from .rename import rename
 from .scan import scan
 from .static import generate_static
 
@@ -17,4 +18,4 @@ def add_root(sess, root, content_type):
         printlnf("The given root is not valid: {}", str(root))
 
 
-__all__ = ['add_root', 'clean_database', 'download_images', 'generate_static', 'scan']
+__all__ = ['add_root', 'clean_database', 'download_images', 'rename', 'generate_static', 'scan']

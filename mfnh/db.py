@@ -65,15 +65,24 @@ class File(Base):
     path = Column(String)  # relative to the root
 
     root_id = Column(Integer, ForeignKey('roots.id'))
-    root = relationship('Root', foreign_keys=[root_id], backref=backref("files", cascade="delete"), lazy='immediate')
+    root = relationship('Root', foreign_keys=[root_id], backref=backref(
+        "files", cascade="delete"), lazy='immediate')
 
-    @property
-    def abspath(self):
+    def get_abspath(self):
         return Path(self.root.path) / self.path
 
-    @property
-    def relpath(self):
+    def get_path(self):
         return Path(self.path)
+
+    def set_path(self, path, relative_to=None):
+        if relative_to is None:
+            self.path = str(path)
+        elif isinstance(relative_to, (str, Path)):
+            self.path = str(Path(path).relative_to(relative_to))
+        elif isinstance(relative_to, Root):
+            self.path = str(Path(path).relative_to(relative_to.path))
+        else:
+            raise ValueError('relative_to has an invalid value')
 
 
 import os  # noqa

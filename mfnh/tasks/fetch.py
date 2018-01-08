@@ -19,18 +19,20 @@ def _download_and_save_image(sess, root, path, image_path):
 
 
 def download_images(sess):
-    movies = sess.query(Movie).options(joinedload(Movie.poster)).options(joinedload(Movie.backdrop)).all()
+    movies = sess.query(Movie).options(joinedload(Movie.poster)
+                                       ).options(joinedload(Movie.backdrop)).all()
     for m in movies:
         if not m.backdrop or not m.poster:
             printlnf('Downloading images for {} ({})', m.title, m.year)
-            parent = m.file.abspath.parent
+            parent = m.file.get_abspath().parent
             info = tmdb.lookup(m)
 
             backdrop = info['backdrop_path']
             poster = info['poster_path']
 
             if not m.backdrop and backdrop:
-                file = _download_and_save_image(sess, m.file.root, parent / 'backdrop.jpg', backdrop)
+                file = _download_and_save_image(
+                    sess, m.file.root, parent / 'backdrop.jpg', backdrop)
                 if file:
                     m.backdrop = file
 

@@ -54,6 +54,8 @@ def lookup(text):
 def get_code(lang):
     if not lang:
         return None
+    if isinstance(lang, str):
+        lang = lookup(lang)
     code = getattr(lang, 'bibliographic', None)
     if not code:
         code = lang.alpha_3

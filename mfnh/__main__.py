@@ -43,7 +43,7 @@ def scan():
 
 
 @app.command(help='rename movies cleanly')
-def remove():
+def rename():
     tasks.rename(sess)
 
 
