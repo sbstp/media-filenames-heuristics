@@ -27,7 +27,7 @@ def rename(sess):
         name = _format_name(db_movie)
         new_path = Path(db_movie.file.root.path) / name / (name + db_movie.file.get_path().suffix)
 
-        if db_movie.file.get_path() != new_path:
+        if not db_movie.file.get_abspath().samefile(new_path):
             printlnf("Renaming {} ({})", db_movie.title, db_movie.year)
 
             root = db_movie.file.root
@@ -42,7 +42,6 @@ def rename(sess):
                 _move_file(root, sub.file, new_path)
                 sess.add(sub)
 
-            # TODO move pictures
             if db_movie.backdrop:
                 _move_file(root, db_movie.backdrop, parent / "backdrop.jpg")
 

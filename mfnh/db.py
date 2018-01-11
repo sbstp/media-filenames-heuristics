@@ -7,6 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship, sessionmaker
 import sqlalchemy
 
+from .util import str_rel_path
+
 Base = declarative_base()
 
 Column = functools.partial(sqlalchemy.Column, nullable=False)
@@ -16,6 +18,16 @@ class ContentType(enum.Enum):
     MOVIES = 1
     TV = 2
 
+    @classmethod
+    def from_str(cls, s):
+        s = s.lower()
+        if s == "movies":
+            return ContentType.MOVIES
+        elif s == "tv":
+            return ContentType.TV
+        else:
+            raise ValueError
+
 
 class Root(Base):
     __tablename__ = 'roots'
@@ -23,6 +35,9 @@ class Root(Base):
     id = Column(Integer, primary_key=True)
     path = Column(String)
     content_type = Column(Enum(ContentType))
+
+    def get_path(self):
+        return Path(self.path)
 
 
 class Subtitle(Base):
@@ -68,6 +83,10 @@ class File(Base):
     root = relationship('Root', foreign_keys=[root_id], backref=backref(
         "files", cascade="delete"), lazy='immediate')
 
+    def __init__(self, path, root):
+        self.path = str_rel_path(path, root.path)
+        self.root = root
+
     def get_abspath(self):
         return Path(self.root.path) / self.path
 
@@ -90,3 +109,4 @@ import os  # noqa
 _engine = create_engine('sqlite:///library.db')
 Base.metadata.create_all(_engine)
 Session = sessionmaker(bind=_engine)
+

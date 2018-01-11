@@ -31,7 +31,7 @@ def app():
 
 
 @app.command(help='add a root directory to the database')
-@click.option('--content-type', type=click.Choice(['movies']), required=True)
+@click.option('--content-type', type=click.Choice(['movies', 'tv']), required=True)
 @click.argument('root')
 def add(content_type, root):
     tasks.add_root(sess, Path(root), content_type)
@@ -50,6 +50,12 @@ def rename():
 @app.command(help='clean the database from removed files')
 def cleandb():
     tasks.clean_database(sess)
+
+
+@app.command('clean-files', help='remove garbage files')
+@click.option('--dry-run', default=False, is_flag=True, help="if true, do not remove files")
+def clean_files(dry_run):
+    tasks.clean_roots(sess, dry_run)
 
 
 @app.command('fetch-images', help='download images for the content')
