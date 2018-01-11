@@ -1,10 +1,9 @@
-from pathlib import Path
 import mimetypes
 import re
+from pathlib import Path
 
 from . import languages, metadata_tokens
 from .util import min
-
 
 RE_SPLIT = re.compile(r"""
 \(([^\)]+)\)| # (parens)
@@ -56,10 +55,14 @@ def _extract_title_year(file: Path):
     try:
         idx = min(year_idx, metadata_idx)
         title = tokens[:idx]
-        if not title:
-            title = [year]
+        if not title and year:
+            title = [str(year)]
+            year = None
     except ValueError:
         title = tokens[:]
+
+    if not title:
+        raise ValueError("could not find any piece of valuable information")
 
     return ' '.join(title), year
 
@@ -131,9 +134,9 @@ def _find_movies(parent, root):
     # type: (Path, Path) -> Generator[MovieResult, None, None]
     for item in parent.iterdir():
         if item.is_file() and _is_movie_file(item):
-                subs = [(sub, _sub_id_language(sub)) for sub in _scan_for_subs(parent, item)]
-                backdrop, poster = _scan_for_images(item)
-                yield MovieResult(item, None if parent == root else parent, subs, backdrop, poster)
+            subs = [(sub, _sub_id_language(sub)) for sub in _scan_for_subs(parent, item)]
+            backdrop, poster = _scan_for_images(item)
+            yield MovieResult(item, None if parent == root else parent, subs, backdrop, poster)
         if item.is_dir():
             yield from _find_movies(item, root)
 
