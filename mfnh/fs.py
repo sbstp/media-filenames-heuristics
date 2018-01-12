@@ -1,15 +1,10 @@
 import mimetypes
-import re
 
 from .util import as_path
+from .parser import tokenize
 
 
 _SUBTITLE_SUFFIXES = set(('.srt', '.sub', '.idx', '.usf', '.smi'))
-_RE_SPLIT = re.compile(r"""
-\(([^\)]+)\)| # (parens)
-\[([^\]]+)\]| # [square]
-([^\-\_\.\s\(\[]+) # Sep.ara.ted
-""", re.VERBOSE)
 
 
 def _walk(root, parent=None):
@@ -82,8 +77,7 @@ class File:
 
     def tokenize(self):
         s = self.name if self.is_dir() else self.stem
-        for m in _RE_SPLIT.finditer(s):
-            yield m.group(1) or m.group(2) or m.group(3)
+        return tokenize(s)
 
 
 class Directory(File):

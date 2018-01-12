@@ -31,7 +31,7 @@ def app():
 
 
 @app.command(help='add a root directory to the database')
-@click.option('--content-type', type=click.Choice(['movies']), required=True)
+@click.option('--content-type', type=click.Choice(['movies', 'tv']), required=True)
 @click.argument('root')
 def add(content_type, root):
     tasks.add_root(sess, Path(root), content_type)
