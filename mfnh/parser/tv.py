@@ -1,5 +1,7 @@
 import re
 
+from ..util import as_path
+
 
 def compile(pattern):
     return re.compile(pattern, re.IGNORECASE)
@@ -16,3 +18,13 @@ def _season_episode(s):
         if m:
             return (int(m.group(1)), int(m.group(2)))
     return None
+
+
+def _find_tv(parent, root):
+    for child in parent.children:
+
+
+def find_tv(root):
+    root = as_path(root)
+    root_dir = fs.walk(root)
+    return _find_movies(root_dir, root_dir)

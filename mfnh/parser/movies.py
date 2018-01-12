@@ -1,27 +1,15 @@
-import mimetypes
 import re
-from pathlib import Path
 
-from . import languages, metadata_tokens
-from .util import min
+from .. import languages, metadata_tokens, fs
+from ..util import min, as_path
 
-RE_SPLIT = re.compile(r"""
-\(([^\)]+)\)| # (parens)
-\[([^\]]+)\]| # [square]
-([^\-\_\.\s\(\[]+) # Sep.ara.ted
-""", re.VERBOSE)
-RE_YEAR = re.compile(r'^(\d{4})$')
+_RE_YEAR = re.compile(r'^(\d{4})$')
 
 # 200 MB is a good size to separate movie files from other video files like samples
-MIN_MOVIE_SIZE = 200 * 1024 * 1024
+# MIN_MOVIE_SIZE = 200 * 1024 * 1024
 
 
-def _tokens(line):
-    for m in RE_SPLIT.finditer(line):
-        yield m.group(1) or m.group(2) or m.group(3)
-
-
-def _extract_title_year(file: Path):
+def _extract_title_year(file):
     # type: (Path,) -> Tuple[str, Optional[int]]
     """
     Usually, the title is placed before the year. However, sometimes
@@ -33,13 +21,13 @@ def _extract_title_year(file: Path):
     If metadata is found before the year, everything before the first
     piece of metadata will be used instead of the year.
     """
-    tokens = list(_tokens(file.stem)) if file.is_file() else list(_tokens(file.name))
+    tokens = list(file.tokenize())
     years = []
     metadata_idx = None
 
     # Collect candidates for years and first metadata position.
     for idx, token in enumerate(tokens):
-        m = RE_YEAR.match(token)
+        m = _RE_YEAR.match(token)
         if m:
             years.append((idx, token))
 
@@ -69,7 +57,7 @@ def _extract_title_year(file: Path):
 
 class MovieResult:
 
-    def __init__(self, path, parent, subs, backdrop=None, poster=None):
+    def __init__(self, *, path, parent, subs, backdrop=None, poster=None):
         self.path = path  # type: Path
         self.title = _extract_title_year(path)  # type: Tuple[str, Optional[int]]
         self.parent = parent  # type: Optional[Path]
@@ -82,33 +70,20 @@ class MovieResult:
         self.poster = poster
 
 
-def _is_movie_file(file):
-    # type: (Path,) -> bool
-    kind, _ = mimetypes.guess_type(file.absolute().as_uri(), strict=False)
-    if kind and kind.startswith("video/"):
-        if file.stat().st_size >= MIN_MOVIE_SIZE:
-            return True
-    return False
-
-
-def _is_subtitle_file(file):
-    return file.suffix.lower() in ('.srt', '.sub', '.idx', '.usf')
-
-
 def _scan_for_subs(parent, file):
-    for item in parent.iterdir():
+    for child in parent.children:
         # Scan for files named like the movie file but with a subtitle extension
-        if item.is_file() and item.name.startswith(file.stem) and _is_subtitle_file(item):
-            yield item
+        if child.is_subtitle() and child.name.startswith(file.stem):
+            yield child
         # Scan for folders named subs/ or subtitles/ and take any subtitle file inside
-        elif item.is_dir() and item.name.lower() in ('subs', 'subtitles'):
-            for subitem in item.iterdir():
-                if subitem.is_file() and _is_subtitle_file(subitem):
-                    yield subitem
+        elif child.is_dir() and child.name.lower() in ('subs', 'subtitles'):
+            for subchild in child.iterdir():
+                if subchild.is_subtitle():
+                    yield subchild
 
 
 def _sub_id_language(subfile):
-    for token in reversed(list(_tokens(subfile.stem))):
+    for token in reversed(list(subfile.tokenize())):
         if token.lower() in metadata_tokens.ALL_WITHOUT_LANGUAGES:
             break
         try:
@@ -119,26 +94,27 @@ def _sub_id_language(subfile):
     return None
 
 
-def _is_image_file(file):
-    if file.exists():
-        return file
-    else:
-        return None
-
-
-def _scan_for_images(movie_path):
-    return _is_image_file(movie_path.parent / "backdrop.jpg"), _is_image_file(movie_path.parent / "poster.jpg")
+def _scan_for_images(movie_file):
+    backdrop = None
+    poster = None
+    for sibling in movie_file.siblings():
+        if sibling.name.lower() == 'backdrop.jpg':
+            backdrop = sibling
+        elif sibling.name.lower() == 'poster.jpg':
+            poster = sibling
+    return backdrop, poster
 
 
 def _find_movies(parent, root):
     # type: (Path, Path) -> Generator[MovieResult, None, None]
-    for item in parent.iterdir():
-        if item.is_file() and _is_movie_file(item):
-            subs = [(sub, _sub_id_language(sub)) for sub in _scan_for_subs(parent, item)]
-            backdrop, poster = _scan_for_images(item)
-            yield MovieResult(item, None if parent == root else parent, subs, backdrop, poster)
-        if item.is_dir():
-            yield from _find_movies(item, root)
+    for child in parent.children:
+        if child.is_video():
+            subs = [(sub, _sub_id_language(sub)) for sub in _scan_for_subs(parent, child)]
+            backdrop, poster = _scan_for_images(child)
+            # yield MovieResult(child, None if parent == root else parent, subs, backdrop, poster)
+            yield MovieResult(path=child, parent=parent, subs=subs, backdrop=backdrop, poster=poster)
+        if child.is_dir():
+            yield from _find_movies(child, root)
 
 
 def find_movies(root):
@@ -150,6 +126,6 @@ def find_movies(root):
     Sometimes the movie file itself has no useful information while its parent directory has
     some. Elements directly under the root yield None for their parent.
     """
-    if not isinstance(root, Path):
-        root = Path(root)
-    return _find_movies(root, root)
+    root = as_path(root)
+    root_dir = fs.walk(root)
+    return _find_movies(root_dir, root_dir)

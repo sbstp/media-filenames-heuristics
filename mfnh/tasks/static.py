@@ -9,8 +9,7 @@ from ..db import Movie
 
 def generate_static(sess, target):
     target = Path(target)
-    movies = sess.query(Movie).options(joinedload(Movie.poster)
-                                       ).options(joinedload(Movie.backdrop)).all()
+    movies = sess.query(Movie).options(joinedload(Movie.poster)).options(joinedload(Movie.backdrop)).all()
 
     image_dir = target / 'images'
     image_dir.mkdir(parents=True, exist_ok=True)

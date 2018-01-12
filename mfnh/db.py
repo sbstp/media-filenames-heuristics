@@ -16,6 +16,16 @@ class ContentType(enum.Enum):
     MOVIES = 1
     TV = 2
 
+    @classmethod
+    def from_str(cls, s):
+        s = s.lower()
+        if s == "movies":
+            return ContentType.MOVIES
+        elif s == "tv":
+            return ContentType.TV
+        else:
+            raise ValueError
+
 
 class Root(Base):
     __tablename__ = 'roots'
@@ -90,4 +100,3 @@ import os  # noqa
 _engine = create_engine('sqlite:///library.db')
 Base.metadata.create_all(_engine)
 Session = sessionmaker(bind=_engine)
-

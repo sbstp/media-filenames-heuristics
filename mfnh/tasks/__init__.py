@@ -11,7 +11,7 @@ from .static import generate_static
 def add_root(sess, root, content_type):
     resolved = root.resolve()
     if resolved.exists() and resolved.is_dir():
-        sess.add(Root(path=str(resolved), content_type=ContentType.MOVIES))
+        sess.add(Root(path=str(resolved), content_type=ContentType.from_str(content_type)))
         sess.commit()
         printlnf("Root added {} succesfully", str(resolved))
     else:

@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 
 def printf(fmt, *args, **kwargs):
@@ -53,3 +54,12 @@ def filter_filename(name):
 
 def str_rel_path(path, rel_to):
     return str(path.relative_to(rel_to))
+
+
+def as_path(obj):
+    if isinstance(obj, Path):
+        return obj
+    elif isinstance(obj, str):
+        return Path(obj)
+    else:
+        raise ValueError
