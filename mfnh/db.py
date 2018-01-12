@@ -100,3 +100,4 @@ import os  # noqa
 _engine = create_engine('sqlite:///library.db')
 Base.metadata.create_all(_engine)
 Session = sessionmaker(bind=_engine)
+

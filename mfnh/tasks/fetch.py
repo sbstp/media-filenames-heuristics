@@ -19,8 +19,7 @@ def _download_and_save_image(sess, root, path, image_path):
 
 
 def download_images(sess):
-    movies = sess.query(Movie).options(joinedload(Movie.poster)
-                                       ).options(joinedload(Movie.backdrop)).all()
+    movies = sess.query(Movie).options(joinedload(Movie.poster)).options(joinedload(Movie.backdrop)).all()
     for m in movies:
         if not m.backdrop or not m.poster:
             printlnf('Downloading images for {} ({})', m.title, m.year)
