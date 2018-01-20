@@ -77,7 +77,7 @@ def _scan_for_subs(parent, file):
             yield child
         # Scan for folders named subs/ or subtitles/ and take any subtitle file inside
         elif child.is_dir() and child.name.lower() in ('subs', 'subtitles'):
-            for subchild in child.iterdir():
+            for subchild in child.children:
                 if subchild.is_subtitle():
                     yield subchild
 
@@ -105,10 +105,13 @@ def _scan_for_images(movie_file):
     return backdrop, poster
 
 
+_MIN_MOVIE_SIZE = 200 * 1024 * 1024
+
+
 def _find_movies(parent, root):
     # type: (Path, Path) -> Generator[MovieResult, None, None]
     for child in parent.children:
-        if child.is_video():
+        if child.is_video(_MIN_MOVIE_SIZE):
             subs = [(sub, _sub_id_language(sub)) for sub in _scan_for_subs(parent, child)]
             backdrop, poster = _scan_for_images(child)
             # yield MovieResult(child, None if parent == root else parent, subs, backdrop, poster)

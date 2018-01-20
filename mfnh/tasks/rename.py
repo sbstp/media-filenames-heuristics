@@ -27,7 +27,7 @@ def rename(sess):
         name = _format_name(db_movie)
         new_path = Path(db_movie.file.root.path) / name / (name + db_movie.file.get_path().suffix)
 
-        if not db_movie.file.get_abspath().samefile(new_path):
+        if db_movie.file.get_abspath() != new_path:
             printlnf("Renaming {} ({})", db_movie.title, db_movie.year)
 
             root = db_movie.file.root

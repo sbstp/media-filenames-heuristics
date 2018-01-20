@@ -45,7 +45,7 @@ def scan_root(sess, root: Root):
             if not db_movie:
                 if scanned_movie.parent:
                     printlnf('Could not find {} / {} on themoviedb.org'.format(
-                        format_title_tuple(scanned_movie.title)), format_title_tuple(scanned_movie.parent_title))
+                        format_title_tuple(scanned_movie.title), format_title_tuple(scanned_movie.parent_title)))
                 else:
                     printlnf('Could not find {} on themoviedb.org'.format(
                         format_title_tuple(scanned_movie.title)))
