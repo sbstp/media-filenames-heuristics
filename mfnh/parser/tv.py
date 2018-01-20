@@ -9,11 +9,12 @@ from ..util import as_path
 _RE_YEAR = re.compile(r'^(\d{4})$')
 _RE_SEASON_EPISODE = [
     re.compile(r'^s(\d\d?)e(\d\d?)$', re.IGNORECASE),
-    re.compile(r'^(\d\d?)x(\d\d?)$'),
+    re.compile(r'^(\d\d?)x(\d\d?)$', re.IGNORECASE),
 ]
 _RE_SEASON = re.compile(r'^s(\d\d?)$', re.IGNORECASE)
 _RE_EPISODE = re.compile(r'^(:?e|ep)(\d\d?)$', re.IGNORECASE)
 _RE_DIGIT = re.compile(r'^(\d\d?)$')
+_RE_SEARCH_DIGIT = re.compile(r'(\d\d)')
 _SEASON_SET = set(('season', 'saison'))
 _EPISODE_SET = set(('episode', 'ep'))
 
@@ -70,6 +71,12 @@ def _lexer(file):
             yield (TokenKind.EPISODE, tokens.popleft())
             continue
 
+        # two digits tokens next to each other
+        m = _RE_DIGIT.match(token)
+        if m and tokens and _RE_DIGIT.match(tokens[0]):
+            yield (TokenKind.SEASON, token)
+            yield (TokenKind.EPISODE, tokens.popleft())
+
         yield (TokenKind.TEXT, token)
 
 
@@ -93,8 +100,19 @@ def _parser(file):
             elif kind == TokenKind.TEXT:
                 if not skip_text:
                     title.append(token)
-        ep.add_title_candidate(' '.join(title))
+
+        if not ep.episode and parent.is_file():
+            # last resort, try to find a digit in the title
+            m = _RE_SEARCH_DIGIT.search(file.name)
+            if m:
+                ep.set_episode(int(m.group(1)))
+            else:
+                ep.add_title_candidate(' '.join(title))
+        else:
+            ep.add_title_candidate(' '.join(title))
+
         parent = parent.parent
+    print(ep.title_candidates, ep.season, ep.episode)
     if not ep.title_candidates or ep.season is None or ep.episode is None:
         return None
     return ep
@@ -150,4 +168,4 @@ def _find_tv(parent, root):
 def find_tv(root):
     root = as_path(root)
     root_dir = fs.walk(root)
-    return _find_movies(root_dir, root_dir)
+    return _find_tv(root_dir, root_dir)
